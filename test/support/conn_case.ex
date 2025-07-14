@@ -21,5 +21,3 @@ defmodule Pusher.ConnCase do
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end
-
-

@@ -14,13 +14,16 @@ defmodule PusherTest do
     assert_receive {:websocket, ^client, :connected}, 1_000
 
     assert "OK" ==
-      conn
-      |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", "Bearer #{Application.fetch_env!(:pusher, :control_secret)}")
-      |> post(~p"/api/push", %{"userId" => user_id, "body" => "hello"})
-      |> response(200)
+             conn
+             |> put_req_header("content-type", "application/json")
+             |> put_req_header(
+               "authorization",
+               "Bearer #{Application.fetch_env!(:pusher, :control_secret)}"
+             )
+             |> post(~p"/api/push", %{"userId" => user_id, "body" => "hello"})
+             |> response(200)
 
-    assert_receive {:websocket, ^client, {:text, "hello"}}
+    assert_receive {:websocket, ^client, {:text, "hello"}}, 1_000
   end
 
   @tag amount: 10
@@ -35,14 +38,48 @@ defmodule PusherTest do
     end
 
     assert "OK" ==
-      conn
-      |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", "Bearer #{Application.fetch_env!(:pusher, :control_secret)}")
-      |> post(~p"/api/push", %{"userId" => user_id, "body" => "hello"})
-      |> response(200)
+             conn
+             |> put_req_header("content-type", "application/json")
+             |> put_req_header(
+               "authorization",
+               "Bearer #{Application.fetch_env!(:pusher, :control_secret)}"
+             )
+             |> post(~p"/api/push", %{"userId" => user_id, "body" => "hello"})
+             |> response(200)
 
     for client <- clients do
-      assert_receive {:websocket, ^client, {:text, "hello"}}
+      assert_receive {:websocket, ^client, {:text, "hello"}}, 1_000
     end
+  end
+
+  test "Fails on incorrect JWT" do
+    token = "invalid"
+    headers = [{"authorization", "Bearer #{token}"}]
+
+    {:ok, client} =
+      WebsocketClient.start_link(
+        uri: "ws://localhost:4000/api/websocket",
+        state: self(),
+        opts: [headers: headers]
+      )
+
+    refute_receive {:websocket, ^client, :connected}, 1_000
+  end
+
+  test "Fails on incorrect secret", %{conn: conn} do
+    assert "Forbidden" ==
+             conn
+             |> put_req_header("content-type", "application/json")
+             |> put_req_header("authorization", "Bearer invalid")
+             |> post(~p"/api/push", %{"userId" => "1234", "body" => "hello"})
+             |> response(403)
+  end
+
+  test "Fails on incorrect params", %{conn: conn} do
+    conn
+    |> put_req_header("content-type", "application/json")
+    |> put_req_header("authorization", "Bearer invalid")
+    |> post(~p"/api/push", %{"userId" => 1234, "body" => "hello"})
+    |> response(422)
   end
 end

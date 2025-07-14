@@ -4,7 +4,14 @@ defmodule Pusher.WebsocketClient do
   def new(port, user_id, notify) do
     token = Pusher.Token.new_user_token(user_id)
     headers = [{"authorization", "Bearer #{token}"}]
-    {:ok, socket} = start_link(uri: "ws://localhost:#{port}/api/websocket", state: notify, opts: [headers: headers])
+
+    {:ok, socket} =
+      start_link(
+        uri: "ws://localhost:#{port}/api/websocket",
+        state: notify,
+        opts: [headers: headers]
+      )
+
     socket
   end
 
